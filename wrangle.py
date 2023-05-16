@@ -29,10 +29,12 @@ def acquire_zillow():
     # Write to a local csv file if it doesn't exist. Includes query for requested data for Single Family Residential households.
 
     else:
-        zillow = pd.read_sql('''SELECT bedroomcnt, bathroomcnt, calculatedfinishedsquarefeet, taxvaluedollarcnt, yearbuilt, fips FROM properties_2017
-	LEFT JOIN propertylandusetype USING (propertylandusetypeid)
-    RIGHT JOIN predictions_2017 USING (parcelid)
-    WHERE propertylandusedesc = 'Single Family Residential';''', z)
+        zillow = pd.read_sql('''SELECT bedroomcnt, bathroomcnt, calculatedfinishedsquarefeet, taxvaluedollarcnt, yearbuilt, fips,
+                            (lotsizesquarefeet - calculatedfinishedsquarefeet) AS ground_area
+                            FROM properties_2017
+	                        LEFT JOIN propertylandusetype USING (propertylandusetypeid)
+                            RIGHT JOIN predictions_2017 USING (parcelid)
+                            WHERE propertylandusedesc = 'Single Family Residential';''', z)
         zillow.to_csv('zillow.csv', index=False)
         return zillow
 
@@ -44,11 +46,12 @@ def prep_zillow(zillow=acquire_zillow()):
                        ,'bathroomcnt': 'bathrooms'
                        ,'calculatedfinishedsquarefeet': 'sqft'
                        ,'taxvaluedollarcnt': 'prop_value'
+                       ,'fips': 'county'
                       })
 
     #Replace numerical values in county with their respective strings.
-    #
-    #zillow.county = zillow.county.replace([6037.0, 6059.0, 6111.0], ['LA', 'Orange', 'Ventura'])
+    
+    zillow.county = zillow.county.replace([6037.0, 6059.0, 6111.0], ['LA', 'Orange', 'Ventura'])
 
     #Remove rows with NaNs from dataset
     zillow = zillow.dropna()
@@ -56,8 +59,9 @@ def prep_zillow(zillow=acquire_zillow()):
     #Handling outliers
     zillow.bedrooms = zillow.bedrooms[zillow.bedrooms.between(1,7)] #limiting properties to those between 1 and 7 bedrooms
     zillow.bathrooms = zillow.bathrooms[zillow.bathrooms.between(1,7)] #limiting properties to those between 1 and 7 bathrooms
-    zillow.sqft = zillow.sqft[zillow.sqft.between(320, 5000)] #removing top 1% of highest square footage
+    zillow.sqft = zillow.sqft[zillow.sqft.between(120, 5500)] #removing top 1% of highest square footage
     zillow.prop_value = zillow.prop_value[zillow.prop_value.between(zillow.prop_value.quantile(.01),zillow.prop_value.quantile(.99))] #removing top and bottom 1% of value
+    zillow.ground_area = zillow.ground_area[zillow.ground_area.between (320, 15_000)] #removing properties with ground area greater than 15,000 sqft and less than 320 sqft
     zillow.yearbuilt = zillow.yearbuilt[zillow.yearbuilt >= 1875] #removing properties built before 1875
 
     #Removing those newly-created nulls as well
@@ -70,8 +74,6 @@ def prep_zillow(zillow=acquire_zillow()):
 #    dummy_df = pd.get_dummies(zillow[['county']], dummy_na=False, drop_first=[True])
 #    dummy_df.head()
 #    zillow = pd.concat([zillow, dummy_df], axis=1)
-
-    zillow = zillow[zillow.fips == 6037.0]
 
     return zillow    
 
@@ -108,12 +110,12 @@ def scale_data(train,
     
     #make copies for scaling
     train_scaled = train.copy() #Ah, making a copy of the df and then overwriting the data in .transform()
-    validate_scaled = test.copy()
+    validate_scaled = validate.copy()
     test_scaled = test.copy()
 
     #scale them!
     #make the thing
-    scaler = sklearn.preprocessing.MinMaxScaler()
+    scaler = sklearn.preprocessing.RobustScaler()
 
     #fit the thing
     scaler.fit(train[cols])

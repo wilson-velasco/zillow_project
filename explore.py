@@ -3,11 +3,11 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-def plot_variable_pairs(df):
+def plot_variable_pairs(df, split):
     '''Takes a dataframe and produces a pairplot of all features. Includes regression line.
     
     Recommended to use .sample() method for large dataframes.'''
-    sns.pairplot(df, kind='reg', corner=True, plot_kws={'line_kws':{'color':'red'}, 'scatter_kws': {'alpha': 0.1}})
+    sns.pairplot(df, kind='reg', corner=True, hue=split, plot_kws={'line_kws':{'color':'red'}, 'scatter_kws': {'alpha': 0.1}})
     plt.show()
 
 def plot_categorical_and_continuous_vars(df, cat, cont):

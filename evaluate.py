@@ -3,91 +3,37 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-def plot_residuals(y, yhat):
-    '''Plots the residuals for a given target variable against the target variable.'''
-
-    sns.scatterplot(x=y, y=(yhat - y))
-    plt.title('Residuals for Target Variable')
-    plt.xlabel(f'Target Variable')
-    plt.ylabel('Residual Values')
-    plt.show()
-
-def regression_errors(y, yhat):
-    '''Takes in an actual value and a predicted value and outputs summary of regression errors.
-    
-    Regression errors included: SSE, ESS, TSS, MSE, RMSE.'''
-
-    #SSE for model
-
-    SSE_model = ((yhat - y) ** 2).sum()
-    print(f'SSE for model = {SSE_model}')
-
-    #ESS for model
-
-    ESS_model = sum((yhat - y.mean())**2)
-    print(f'ESS for model = {ESS_model}')
-
-    #TSS for model
-
-    TSS_model = ESS_model + SSE_model
-    print(f'TSS for model = {TSS_model}')
-
-    #MSE for model
-
-    MSE_model = SSE_model / len(y)
-    print(f'MSE for model = {MSE_model}')
-
-    #RMSE for model
-
-    RMSE_model = MSE_model ** 0.5
-    print(f'RMSE for model = {RMSE_model}')
+# --------------------------------------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------------------------------------- #
 
 def baseline_mean_errors(y):
-    '''Computes the SSE, MSE, and RMSE for the baseline model of a given target variable.'''
+    '''Computes the RMSE for the baseline model of a given target variable.'''
 
     #Set the baseline
     baseline = y.mean()
 
     #SSE for baseline
-
     SSE_baseline = ((np.full(len(y), baseline) - y) ** 2).sum()
-    print(f'SSE for baseline = {SSE_baseline}')
 
     #MSE for baseline
-
     MSE_baseline = SSE_baseline / len(y)
-    print(f'MSE for baseline = {MSE_baseline}')
 
     #RMSE for baseline
-
     RMSE_baseline = MSE_baseline ** 0.5
     print(f'RMSE for baseline = {RMSE_baseline}')
 
-def better_than_baseline(y, yhat):
-    '''Returns SSE values for actual vs. predicted, states whether the predictive model performed better, and returns True if so.'''
+# --------------------------------------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------------------------------------- #
 
-    #Set the baseline
-    baseline = y.mean()
-
-    SSE_model = ((yhat - y) ** 2).sum()
-    SSE_baseline = ((np.full(len(y), baseline) - y) ** 2).sum()
-
-    print(f'The SSE for the model is: {SSE_model}')
-    print(f'The SSE for the baseline is: {SSE_baseline}')
-
-    if SSE_model < SSE_baseline:
-        print('The model outperforms the baseline.')
-        return True
-    else:
-        print('The model did not perform better than the baseline.')
-        return False
-
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.linear_model import LinearRegression, LassoLars, TweedieRegressor
 from sklearn.preprocessing import PolynomialFeatures
 
 def create_models(X_train, X_validate, features, target, target_validate):
+    '''Takes in train, validate, list of features to send in, train target, and validate target, and runs both through
+    all four models (MLR, LASSO, GLM, Poly) and provides their respective RMSE and R2 scores.'''
 
+    #Assign train and validate to the dataset+features to send in
     train = X_train[features]
     validate = X_validate[features]
 
@@ -103,8 +49,13 @@ def create_models(X_train, X_validate, features, target, target_validate):
     
     lr.fit(train, target)
 
+    #RMSE scores for train and validate
     train_rmse_lr = mean_squared_error(target, lr.predict(train), squared=False)
     train_rmse_lr_val = mean_squared_error(target_validate, lr.predict(validate), squared=False)
+
+    #R2 scores for train and validate
+    train_r2_lr = r2_score(target, lr.predict(train))
+    train_r2_lr_val = r2_score(target_validate, lr.predict(validate))
 
     #LASSO LARS Regression
 
@@ -115,6 +66,9 @@ def create_models(X_train, X_validate, features, target, target_validate):
     train_rmse_lars = mean_squared_error(target, lars.predict(train), squared=False)
     train_rmse_lars_val = mean_squared_error(target_validate, lars.predict(validate), squared=False)
 
+    train_r2_lars = r2_score(target, lars.predict(train))
+    train_r2_lars_val = r2_score(target_validate, lars.predict(validate))
+
     #Generalized Linear Model 
 
     glm = TweedieRegressor(power=1, alpha=0)
@@ -124,9 +78,12 @@ def create_models(X_train, X_validate, features, target, target_validate):
     train_rmse_glm = mean_squared_error(target, glm.predict(train), squared=False)
     train_rmse_glm_val = mean_squared_error(target_validate, glm.predict(validate), squared=False)
 
+    train_r2_glm = r2_score(target, glm.predict(train))
+    train_r2_glm_val = r2_score(target_validate, glm.predict(validate))
+
     #Polynomial Regression
 
-    pf = PolynomialFeatures(degree=2)
+    pf = PolynomialFeatures(degree=4)
 
     train_degree2 = pf.fit_transform(train)
     validate_degree2 = pf.transform(validate)
@@ -136,13 +93,75 @@ def create_models(X_train, X_validate, features, target, target_validate):
     lr2.fit(train_degree2, target)
 
     train_rmse_poly = mean_squared_error(target, lr2.predict(train_degree2), squared=False)
-
-
     train_rmse_poly_val = mean_squared_error(target_validate, lr2.predict(validate_degree2), squared=False)
+
+    train_r2_poly = r2_score(target, lr2.predict(train_degree2))
+    train_r2_poly_val = r2_score(target_validate, lr2.predict(validate_degree2))
+
+    #Create dataframe that provides RMSE and R2 scores for train and validate across all models.
 
     metrics_df = pd.DataFrame({'model': ['baseline', 'MLR', 'LASSO', 'GLM', 'Poly'],
                                'rmse_train': [RMSE_baseline, train_rmse_lr, train_rmse_lars, train_rmse_glm, train_rmse_poly],
-                               'rmse_validate': [RMSE_baseline, train_rmse_lr_val, train_rmse_lars_val, train_rmse_glm_val, train_rmse_poly_val]})
+                               'rmse_validate': [RMSE_baseline, train_rmse_lr_val, train_rmse_lars_val, train_rmse_glm_val, train_rmse_poly_val],
+                               'r2_train': [0, train_r2_lr, train_r2_lars, train_r2_glm, train_r2_poly],
+                               'r2_validate': [0, train_r2_lr_val, train_r2_lars_val, train_r2_glm_val, train_r2_poly_val]})
     
     return metrics_df
 
+def test_model(train_scaled, test_scaled, features, target_train, target_test):
+    '''Takes in train_scaled, test_scaled, list of features to send in, target_train and target test, and produces
+    RMSE and R2 scores for the test dataset.'''
+
+    #Initialize the Polynomial Features
+    pf = PolynomialFeatures(degree=4)
+
+    #Fit and transform on train only, transform the test dataset based on the fit on train.
+
+    train_degree2 = pf.fit_transform(train_scaled[features])
+    test_degree2 = pf.transform(test_scaled[features])
+
+    #Initialize Linear Regression.
+    lr2 = LinearRegression(normalize=True)
+
+    #Fit Linear regression based on the transformed train dataset.
+    lr2.fit(train_degree2, target_train)
+
+    #RMSE score for test.
+    rmse_test = mean_squared_error(target_test, lr2.predict(test_degree2), squared=False)
+    
+    #R2 score for test.
+    r2_test = r2_score(target_test, lr2.predict(test_degree2))
+
+    #Print out dataframe to show RMSE and R2 scores for test.
+    metrics_df = pd.DataFrame({'model': ['Poly'],
+                               'rmse_test': [rmse_test],
+                               'r2_test': [r2_test]})
+    
+    return metrics_df
+
+def get_act_pred_viz(train_scaled, test_scaled, features, target_train, target_test):
+    '''Takes in train_scaled, test_scaled, list of features to send in, target_train and target test, and produces
+    a regression plot for actual vs predicted based on Polynomial model.'''
+
+    #Initialize the Polynomial Features
+    pf = PolynomialFeatures(degree=4)
+
+    #Fit and transform on train only, transform the test dataset based on the fit on train.
+
+    train_degree2 = pf.fit_transform(train_scaled[features])
+    test_degree2 = pf.transform(test_scaled[features])
+
+    #Initialize Linear Regression.
+    lr2 = LinearRegression(normalize=True)
+
+    #Fit Linear regression based on the transformed train dataset.
+    lr2.fit(train_degree2, target_train)
+
+    act = target_test
+    pred = lr2.predict(test_degree2)
+
+    sns.regplot(x=act, y=pred, line_kws={'color':'red'}, scatter_kws={'alpha': 0.1})
+    plt.xlabel('Actual Property Value')
+    plt.ylabel('Predicted Property Value')
+    plt.axhline(target_train.mean(), c='black', linestyle='-')
+    plt.show()
