@@ -1,13 +1,10 @@
-# zillow_project
-Predictive models for house prices in the LA area
+# Project Description
+
+This project uses the Zillow dataset from 2017 for the LA, Orange, and Ventura counties. The predictive modeling is based on the number of bedrooms and bathrooms, square footage, year built, and ground area to provide an estimate for a given property's value (in 2017 dollars).
 
 # Project Goals
 
 To create a predictive model for Single Family Residential houses that performs better than the baseline.
-
-# Project Description
-
-This project uses the Zillow dataset from 2017 for the LA, Orange, and Ventura counties. The predictive modeling is based on the number of bedrooms and bathrooms, as well as the square footage to provide an estimate for a given property's value (in 2017 dollars). 
 
 # Project Planning
 
@@ -16,6 +13,8 @@ Acquire
     - bedrooms
     - bathrooms
     - square footage
+    - year built
+    - ground area (lot size minus square footage)
 - Data is limited to:
     - 2017 properties
     - properties that had a transaction
@@ -67,7 +66,11 @@ Column Name | Description | Key
 bedrooms | Number of bedrooms | Integer
 bathrooms | Number of bathrooms | Float
 sqft | Square footage of property | Integer
-property_value | Value of property | In dollars
+property_value | Value of property | In dollars, Integer
+yearbuilt | Year that property was built | Integer
+county | County where property is located | LA, Orange, Ventura
+ground_area | Remaining area after sqft of house is subtracted from lot size | Integer
+
 
 # How to Reproduce
 
@@ -75,7 +78,10 @@ Ensure that you have a env.py file with your own username and password to connec
 
 # Key Findings
 
-
+- International Residential Code: 120 sqft minimum for houses, 320 sqft for lots.
+- Ground area was the worst predictor of property value, but still aided in modeling.
+- Polynomial regression with degree=3 consistently outperformed all other models.
 
 # Recommendations
 
+- Best predictor may be neighborhoods, preferably those set by the real estate market. Data Engineer should attempt to retrieve that data.

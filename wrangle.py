@@ -57,9 +57,9 @@ def prep_zillow(zillow=acquire_zillow()):
     zillow = zillow.dropna()
 
     #Handling outliers
-    zillow.bedrooms = zillow.bedrooms[zillow.bedrooms.between(1,7)] #limiting properties to those between 1 and 7 bedrooms
-    zillow.bathrooms = zillow.bathrooms[zillow.bathrooms.between(1,7)] #limiting properties to those between 1 and 7 bathrooms
-    zillow.sqft = zillow.sqft[zillow.sqft.between(120, 5500)] #removing top 1% of highest square footage
+    zillow.bedrooms = zillow.bedrooms[zillow.bedrooms.between(1,7)] #limiting properties to those between 1 and 7 bedrooms, inclusive
+    zillow.bathrooms = zillow.bathrooms[zillow.bathrooms.between(1,7)] #limiting properties to those between 1 and 7 bathrooms, inclusive
+    zillow.sqft = zillow.sqft[zillow.sqft.between(120, 5500)] #removing top 1% of highest square footage and those below 120 sqft
     zillow.prop_value = zillow.prop_value[zillow.prop_value.between(zillow.prop_value.quantile(.01),zillow.prop_value.quantile(.99))] #removing top and bottom 1% of value
     zillow.ground_area = zillow.ground_area[zillow.ground_area.between (320, 15_000)] #removing properties with ground area greater than 15,000 sqft and less than 320 sqft
     zillow.yearbuilt = zillow.yearbuilt[zillow.yearbuilt >= 1875] #removing properties built before 1875
@@ -68,12 +68,12 @@ def prep_zillow(zillow=acquire_zillow()):
     zillow = zillow.dropna()
 
     #Adjusting dtypes so dataframe is easier to read
-    zillow[['bedrooms', 'sqft', 'prop_value', 'yearbuilt']] = zillow[['bedrooms', 'sqft', 'prop_value', 'yearbuilt']].astype(int)
+    zillow[['bedrooms', 'sqft', 'prop_value', 'yearbuilt', 'ground_area']] = zillow[['bedrooms', 'sqft', 'prop_value', 'yearbuilt', 'ground_area']].astype(int)
 
     #Encoding 'county' for future modeling
-#    dummy_df = pd.get_dummies(zillow[['county']], dummy_na=False, drop_first=[True])
-#    dummy_df.head()
-#    zillow = pd.concat([zillow, dummy_df], axis=1)
+    dummy_df = pd.get_dummies(zillow[['county']], dummy_na=False, drop_first=[True])
+    dummy_df.head()
+    zillow = pd.concat([zillow, dummy_df], axis=1)
 
     return zillow    
 
@@ -107,20 +107,20 @@ def scale_data(train,
                validate, 
                test, 
                cols):
+    '''Takes in train, validate, and test set, and outputs scaled versions of the columns that were sent in as dataframes'''
     
-    #make copies for scaling
-    train_scaled = train.copy() #Ah, making a copy of the df and then overwriting the data in .transform()
+    #Make copies for scaling
+    train_scaled = train.copy() #Ah, making a copy of the df and then overwriting the data in .transform() to remove warning message
     validate_scaled = validate.copy()
     test_scaled = test.copy()
 
-    #scale them!
-    #make the thing
+    #Initiate scaler, using Robust Scaler
     scaler = sklearn.preprocessing.RobustScaler()
 
-    #fit the thing
+    #Fit to train only
     scaler.fit(train[cols])
 
-    #use the thing
+    #Creates scaled dataframes of train, validate, and test. This will still preserve columns that were not sent in initially.
     train_scaled[cols] = scaler.transform(train[cols])
     validate_scaled[cols] = scaler.transform(validate[cols])
     test_scaled[cols] = scaler.transform(test[cols])
